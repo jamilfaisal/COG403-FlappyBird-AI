@@ -80,7 +80,7 @@ SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 pygame.display.set_caption('Flappy Bird')
 
 IMAGES, HITMASKS = load()
-PIPEGAPSIZE = 100  # gap between upper and lower part of pipe
+PIPEGAPSIZE = 200  # gap between upper and lower part of pipe
 BASEY = SCREENHEIGHT * 0.79
 
 PLAYER_WIDTH = IMAGES['player'][0].get_width()
@@ -200,7 +200,7 @@ class GameState:
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.update()
         FPSCLOCK.tick(FPS)
-        return image_data, reward, terminal
+        return image_data, reward, terminal, self.score
 
 
 def getRandomPipe():

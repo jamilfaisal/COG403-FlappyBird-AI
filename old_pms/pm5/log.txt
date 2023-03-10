@@ -1,0 +1,21 @@
+init ep = 1
+final = 0.1
+floor = 100000 iter
+max iter = 1800000
+iteration: 3000 elapsed time: 102.77044296264648 epsilon: 0.9730087300873008 action: 1 reward: 0.1 Q max: 0.51464623 score: [0, 0] location: pm5 mem_q_val: 11.134863421320915 y_batch: 11.808581724762917
+iteration: 6000 elapsed time: 204.85760974884033 epsilon: 0.9460084600846008 action: 1 reward: 0.1 Q max: 0.5136813 score: [0, 0] location: pm5 mem_q_val: 16.411124609410763 y_batch: 16.82665966451168
+iteration: 9000 elapsed time: 402.1558437347412 epsilon: 0.9190081900819008 action: 0 reward: 0.1 Q max: 0.5015916 score: [0, 0] location: pm5 mem_q_val: 25.389540314674377 y_batch: 26.759408742189407
+iteration: 12000 elapsed time: 728.3992900848389 epsilon: 0.8920079200792008 action: 1 reward: 0.1 Q max: 0.15668458 score: [0, 0] location: pm5 mem_q_val: 18.832815575413406 y_batch: 19.302819006145
+iteration: 15000 elapsed time: 982.1922225952148 epsilon: 0.8650076500765007 action: 1 reward: 0.1 Q max: 0.1695068 score: [0, 0] location: pm5 mem_q_val: 18.50335757434368 y_batch: 18.013514913618565
+iteration: 18000 elapsed time: 1137.761973619461 epsilon: 0.8380073800738007 action: 1 reward: 0.1 Q max: 0.35488328 score: [0, 0] location: pm5 mem_q_val: 26.03045302629471 y_batch: 27.12206308543682
+iteration: 21000 elapsed time: 1418.7375392913818 epsilon: 0.8110071100711007 action: 1 reward: 0.1 Q max: 0.14920568 score: [0, 0] location: pm5 mem_q_val: 23.91632328182459 y_batch: 26.09543165564537
+iteration: 24000 elapsed time: 1705.5179469585419 epsilon: 0.7840068400684007 action: 0 reward: 0.1 Q max: 0.21215886 score: [0, 0] location: pm5 mem_q_val: 24.630865827202797 y_batch: 25.0333418995142
+iteration: 27000 elapsed time: 1999.3421938419342 epsilon: 0.7570065700657006 action: 1 reward: 0.1 Q max: 0.21350294 score: [0, 0] location: pm5 mem_q_val: 19.94988553225994 y_batch: 22.46163482964039
+iteration: 30000 elapsed time: 2292.5687804222107 epsilon: 0.7300063000630006 action: 0 reward: 0.1 Q max: 0.22314034 score: [0, 0] location: pm5 mem_q_val: 19.882121682167053 y_batch: 22.69104540348053
+iteration: 33000 elapsed time: 2594.985067129135 epsilon: 0.7030060300603006 action: 0 reward: 0.1 Q max: 0.32223955 score: [0, 0] location: pm5 mem_q_val: 20.01684245467186 y_batch: 21.7922645509243
+iteration: 36000 elapsed time: 2891.0136818885803 epsilon: 0.6760057600576006 action: 1 reward: 0.1 Q max: 0.40135577 score: [0, 0] location: pm5 mem_q_val: 20.19313544034958 y_batch: 22.360112130641937
+iteration: 39000 elapsed time: 3065.102530002594 epsilon: 0.6490054900549005 action: 1 reward: 0.1 Q max: 0.39396924 score: [0, 0] location: pm5 mem_q_val: 17.2939051091671 y_batch: 22.40667152404785
+iteration: 42000 elapsed time: 3165.759723186493 epsilon: 0.6220052200522005 action: 1 reward: 0.1 Q max: 0.45880747 score: [0, 0] location: pm5 mem_q_val: 14.378958970308304 y_batch: 18.172872126102448
+iteration: 45000 elapsed time: 3266.431583404541 epsilon: 0.5950049500495005 action: 1 reward: 0.1 Q max: 0.2047773 score: [0, 0] location: pm5 mem_q_val: 6.244157209992409 y_batch: 17.257034569978714
+iteration: 48000 elapsed time: 3367.6940870285034 epsilon: 0.5680046800468004 action: 1 reward: 0.1 Q max: 0.1615959 score: [0, 0] location: pm5 mem_q_val: 4.797775849699974 y_batch: 6.837113797664642
+iteration: 51000 elapsed time: 3468.3304584026337 epsilon: 0.5410044100441005 action: 1 reward: 0.1 Q max: 0.1394667 score: [0, 0] location: pm5 mem_q_val: 4.0913669392466545 y_batch: 6.858962386846542

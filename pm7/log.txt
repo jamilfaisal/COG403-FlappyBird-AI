@@ -1,0 +1,5 @@
+init ep = 0.1
+final ep = 0.01
+floor = 600k
+max iter = 1800k
+target_net update C = 100
