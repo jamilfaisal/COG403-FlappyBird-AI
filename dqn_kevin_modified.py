@@ -23,7 +23,7 @@ class KevinCNN(nn.Module):
 
         self.number_of_actions = 2
         self.gamma = 0.95
-        self.final_epsilon = 0.0001
+        self.final_epsilon = 0.00005
         self.initial_epsilon = init_ep
         self.number_of_iterations = MAX_ITER
         self.replay_memory_size = 20000
@@ -84,6 +84,12 @@ def init_weights(net):
     if type(net) == nn.Linear:
         torch.nn.init.uniform(net.weight, -0.01, 0.01)
         net.bias.data.fill_(0.0)
+    # if type(net) == nn.Conv2d:
+    #     torch.nn.init.uniform(net.weight, -0.01, 0.01)
+    #     net.bias.data.fill_(0.01)
+    # if type(net) == nn.Linear:
+    #     torch.nn.init.uniform(net.weight, -0.01, 0.01)
+    #     net.bias.data.fill_(0.01)
 
 def train(model, start, init_ep):
 
@@ -96,10 +102,7 @@ def train(model, start, init_ep):
     if torch.cuda.is_available():  # put on GPU if CUDA is available
         target_network = target_network.cuda()
     # RMSP
-    # feel like 1e-6 is still too much
-    # https://www.reddit.com/r/reinforcementlearning/comments/cm7yu4/how_to_deal_with_rl_algos_getting_stuck_in_local/
-
-    optimizer = optim.RMSprop(model.parameters(), lr=1e-8, weight_decay=0.9, momentum=0.95)
+    optimizer = optim.RMSprop(model.parameters(), lr=1e-6, weight_decay=0.9, momentum=0.95)
 
     # mean squared error formula for loss loss
     mse = nn.MSELoss()
@@ -184,8 +187,8 @@ def train(model, start, init_ep):
             random_action = True
         else:
             random_action = False
-        # if not random_action:
-        #     print("Performed not random action!")
+        # if random_action:
+        #     print("Performed random action!")
 
         # index the best action
         if random_action:
@@ -202,7 +205,7 @@ def train(model, start, init_ep):
         action_prev = action.unsqueeze(0)
 
         # sample minibatch and train w/ back prop
-        if len(replay_memory) >= 3000:
+        if len(replay_memory) >= 1:
             # sample random minibatch
             minibatch = random.sample(replay_memory, min(len(replay_memory), model.minibatch_size))
 
@@ -219,7 +222,7 @@ def train(model, start, init_ep):
                 state_1_batch = state_1_batch.cuda()
 
             # get output for the next state
-            output_1_batch = target_network(state_1_batch)
+            output_1_batch = model(state_1_batch)
 
             # set y_j to r_j for crash(terminal state), otherwise to r_j + gamma*max(Q)
             y_batch = torch.cat(tuple(reward_batch[i] if minibatch[i][4]
@@ -283,39 +286,42 @@ def train(model, start, init_ep):
             max_score[1] = iteration
 
         if iteration % 200000 == 0:
-            #torch.save(model, "pm7/current_model_" + str(iteration) + ".pth")
+            torch.save(model, "pm0320/current_model_" + str(iteration) + ".pth")
             a = 1
-        if iteration % 100000 == 0:
+        if iteration % 2500 == 0:
             print( "iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",
                   action_index.cpu().detach().numpy(), "reward:", reward.numpy()[0][0], "Q max:",
-                  np.max(output.cpu().detach().numpy()), ""
+                  np.max(output.cpu().detach().numpy()), "loss:", loss.cpu().detach().numpy(),
+                   "output:", output.cpu().detach().numpy(),
                   "score:", max_score, "location:", "pm7",
                   "mem_q_val:", sum(q_value.cpu().detach().numpy()), "y_batch:", sum(y_batch.cpu().detach().numpy()))
         if iteration ==3000:
             print( "iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",
                   action_index.cpu().detach().numpy(), "reward:", reward.numpy()[0][0], "Q max:",
-                  np.max(output.cpu().detach().numpy()), ""
+                  np.max(output.cpu().detach().numpy()), "loss:", loss.cpu().detach().numpy(),
+                   "output:", output.cpu().detach().numpy(),
                   "score:", max_score, "location:", "pm7",
                   "mem_q_val:", sum(q_value.cpu().detach().numpy()), "y_batch:", sum(y_batch.cpu().detach().numpy()))
-        if iteration == 0 or iteration == 300 or iteration == 30 or iteration == 10000:
+        if iteration == 0 or iteration == 300 or iteration == 30:
             print("iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",
                   action_index.cpu().detach().numpy(), "reward:", reward.numpy()[0][0], "Q max:",
-                  np.max(output.cpu().detach().numpy()), ""
+                  np.max(output.cpu().detach().numpy()), "loss:", loss.cpu().detach().numpy(),
+                   "output:", output.cpu().detach().numpy(),
                                                          "score:", max_score, "location:", "pm7",)
-        if iteration == 10000:
-            curr_y_batch = sum(y_batch.cpu().detach().numpy())
-            curr_mem_q_val = sum(q_value.cpu().detach().numpy())
-        elif iteration % 200000 == 0:
-            prev_y_batch = curr_y_batch
-            prev_mem_q_val = curr_mem_q_val
-
-            curr_y_batch = sum(y_batch.cpu().detach().numpy())
-            curr_mem_q_val = sum(q_value.cpu().detach().numpy())
-
-            if prev_y_batch > curr_y_batch:
-                return False
-            elif prev_mem_q_val > curr_mem_q_val:
-                return False
+        # if iteration == 10000:
+        #     curr_y_batch = sum(y_batch.cpu().detach().numpy())
+        #     curr_mem_q_val = sum(q_value.cpu().detach().numpy())
+        # elif iteration % 200000 == 0:
+        #     prev_y_batch = curr_y_batch
+        #     prev_mem_q_val = curr_mem_q_val
+        #
+        #     curr_y_batch = sum(y_batch.cpu().detach().numpy())
+        #     curr_mem_q_val = sum(q_value.cpu().detach().numpy())
+        #
+        #     if prev_y_batch > curr_y_batch:
+        #         return False
+        #     elif prev_mem_q_val > curr_mem_q_val:
+        #         return False
 
 
 
@@ -391,7 +397,7 @@ def run(mode):
         # [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
         # hit first pipe [1.0, 0.75, 0.5, 0.25, 0.15, 0.1,
         init_ep = [0.115, 0.125, 0.135]
-        init_ep = [0.12, 0.1, 0.9]
+        init_ep = [0.0499+0.0001, 0.0125, 0.0075]
         counter = 0
         while smart is False:
             print("\n" + "init_ep: " + str(init_ep[counter]) + "\n")

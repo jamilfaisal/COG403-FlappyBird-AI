@@ -191,11 +191,12 @@ class GameState:
             SCREEN.blit(IMAGES['pipe'][0], (uPipe['x'], uPipe['y']))
             SCREEN.blit(IMAGES['pipe'][1], (lPipe['x'], lPipe['y']))
 
-        SCREEN.blit(IMAGES['base'], (self.basex, BASEY))
+
         # print score so player overlaps the score
         # showScore(self.score)
+        SCREEN.blit(IMAGES['base'], (self.basex, BASEY))
         SCREEN.blit(IMAGES['player'][self.playerIndex],
-                    (self.playerx, self.playery))
+                     (self.playerx, self.playery))
 
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.update()
