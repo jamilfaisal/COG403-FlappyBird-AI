@@ -1,3 +1,6 @@
+"""
+This version uses one neural network for both the actor and the critic
+"""
 import os
 import time
 
@@ -18,7 +21,7 @@ class PPO(nn.Module):
         self.number_of_actions = 2
         self.number_of_iterations = 3000000
         self.optimization_modulo = 20
-        self.save_modulo = 25000
+        self.save_modulo = 1600
         self.save_folder = "pm_ppo"
 
         # Optimization hyperparameters
@@ -233,7 +236,7 @@ def train(model: PPO, start):
         if iteration % model.save_modulo == 0:
             if not os.path.exists(model.save_folder):
                 os.mkdir(model.save_folder)
-            torch.save(model, os.path.join(model.save_folder, str(iteration) + ".pth"))
+            torch.save(model.state_dict(), os.path.join(model.save_folder, str(iteration) + ".pth"))
             print("Iteration: ", iteration)
             print("Elapsed Time: ", time.time() - start)
             # print("Total loss: ", total_loss)
