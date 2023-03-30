@@ -30,27 +30,31 @@ class Policy(nn.Module):
 
         # Actor Neural network
         self.actor = nn.Sequential(
-            nn.Conv2d(4, 16, 8, 4),
+            nn.Conv2d(4, 32, 8, 4),
             nn.ReLU(inplace=True),
-            nn.Conv2d(16, 32, 4, 2),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(2592, 256),
+            nn.Linear(3136, 512),
             nn.ReLU(inplace=True),
-            nn.Linear(256, self.number_of_actions),
+            nn.Linear(512, self.number_of_actions),
             nn.Softmax(dim=-1)
         )
 
         # Critic Neural Network
         self.critic = nn.Sequential(
-            nn.Conv2d(4, 16, 8, 4),
+            nn.Conv2d(4, 32, 8, 4),
             nn.ReLU(inplace=True),
-            nn.Conv2d(16, 32, 4, 2),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(2592, 256),
+            nn.Linear(3136, 512),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 1)
+            nn.Linear(512, 1)
         )
 
     def actor_output(self, state):
@@ -82,12 +86,12 @@ class PPO(nn.Module):
         super(PPO, self).__init__()
 
         # Model saving parameters
-        self.save_modulo = 1600
+        self.save_modulo = 25000
         self.save_folder = "pm_ppo"
 
         # Hyperparameters
         self.number_of_iterations = 3000000
-        self.optimization_modulo = 2
+        self.optimization_modulo = 40
         self.gamma = 0.99
         self.gradient_clip = 0.1
         self.max_gradient = 40 # To prevent the gradient from exploding
@@ -101,8 +105,8 @@ class PPO(nn.Module):
 
         # Optimizers
         self.optimizer = optim.Adam([
-            {"params": self.policy_main.actor.parameters(), "lr": 0.0003},
-            {"params": self.policy_main.critic.parameters(), "lr": 0.001},
+            {"params": self.policy_main.actor.parameters(), "lr": 1e-5},
+            {"params": self.policy_main.critic.parameters(), "lr": 1e-5},
         ])
 
         # MSE loss
@@ -149,8 +153,9 @@ class PPO(nn.Module):
         action_loss = -torch.min(ratio, clamped_ratio) * advantages
 
         # Value loss
-        value_loss = (returns - critic_state_value).pow(2).mean()
-        value_loss = self.value_loss_regularizer * value_loss
+        # value_loss = (returns - critic_state_value).pow(2).mean()
+        # value_loss = self.value_loss_regularizer * value_loss
+        value_loss = self.value_loss_regularizer * self.mse(critic_state_value, returns)
 
         # Entropy loss
         entropy_loss = -self.entropy_loss_regularizer * entropy
@@ -223,9 +228,6 @@ def train(model: PPO, start):
     # Initialize episode length
     episode_length = 0
 
-    # Initialize replay memory
-    replay_memory = []
-
     # Initial action is to do nothing
     action = torch.zeros([model.policy_main.number_of_actions], dtype=torch.float32)
     action[0] = 1
@@ -269,7 +271,11 @@ def train(model: PPO, start):
             print("Entropy Loss: ", entropy_loss)
             print("")
             # Reset memory
-            replay_memory = []
+            model.states = []
+            model.actions = []
+            model.action_logSoftmax = []
+            model.rewards = []
+            model.terminals = []
 
         # Update/Print & Reset episode length
         if terminal is False:
