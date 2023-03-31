@@ -1,7 +1,7 @@
 """
 This version uses two different neural networks and uses two policies.
 """
-
+import csv
 import os
 import time
 
@@ -86,11 +86,11 @@ class PPO(nn.Module):
         super(PPO, self).__init__()
 
         # Model saving parameters
-        self.save_modulo = 25000
+        self.save_modulo = 100000
         self.save_folder = "pm_ppo_version2"
 
         # Hyperparameters
-        self.number_of_iterations = 3000000
+        self.number_of_iterations = 1600000
         self.optimization_modulo = 40
         self.gamma = 0.99
         self.gradient_clip = 0.1
@@ -228,6 +228,9 @@ def train(model: PPO, start):
     # Initialize episode length
     episode_length = 0
 
+    # Initialize iteration, episode_length list
+    it_ep_length_list = []
+
     # Initial action is to do nothing
     action = torch.zeros([model.policy_main.number_of_actions], dtype=torch.float32)
     action[0] = 1
@@ -281,9 +284,7 @@ def train(model: PPO, start):
         if terminal is False:
             episode_length += 1
         else:
-            # TODO Save this value somewhere to generate a graph
-            if episode_length != 49:
-                print(episode_length)
+            it_ep_length_list.append([iteration, episode_length])
             episode_length = 0
 
         # Save model
@@ -291,6 +292,10 @@ def train(model: PPO, start):
             if not os.path.exists(model.save_folder):
                 os.mkdir(model.save_folder)
             torch.save(model.state_dict(), os.path.join(model.save_folder, str(iteration) + ".pth"))
+            with open(os.path.join(model.save_folder, "output.csv"), "w", newline='') as f:
+                csv_output = csv.writer(f)
+                csv_output.writerow(["iteration", "episode_length"])
+                csv_output.writerows(it_ep_length_list)
             print("Iteration: ", iteration)
             print("Elapsed Time: ", time.time() - start)
 
