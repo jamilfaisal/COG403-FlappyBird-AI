@@ -174,31 +174,6 @@ class PPO(nn.Module):
         return total_loss.mean(), value_loss, action_loss.mean(), entropy_loss.mean()
 
 
-# def process_replay_memory(replay_memory):
-#     state = []
-#     action = []
-#     action_log_prob = []
-#     value = []
-#     reward = []
-#     mask = []
-#     for memory in replay_memory:
-#         state.append(memory[0])
-#         action.append(memory[1])
-#         action_log_prob.append(memory[2])
-#         value.append(memory[3])
-#         reward.append([[memory[4]]])
-#         mask.append(memory[5])
-#
-#     state = torch.stack(state).detach()
-#     action = torch.stack(action).detach()
-#     action_logSoftmax = torch.stack(action_log_prob).detach()
-#     critic_state_value = torch.stack(value).detach()
-#     reward = torch.tensor(reward).detach()
-#     terminal = torch.stack(mask).detach()
-#
-#     return state, action, action_logSoftmax, critic_state_value, reward, terminal
-
-
 def init_weights(m):
     if type(m) == nn.Conv2d or type(m) == nn.Linear:
         torch.nn.init.uniform(m.weight, -0.01, 0.01)
