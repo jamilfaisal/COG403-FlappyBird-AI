@@ -308,8 +308,8 @@ def main(mode):
     cuda_is_available = torch.cuda.is_available()
 
     if mode == "train":
-        if not os.path.exists('pretrained_model/'):
-            os.mkdir('pretrained_model/')
+        if not os.path.exists('../pretrained_model/'):
+            os.mkdir('../pretrained_model/')
 
         model = PPO()
         if cuda_is_available:
