@@ -120,6 +120,7 @@ class PPO:
         prev_states = torch.stack(self.states, dim=0).to(device)
         prev_actions = torch.stack(self.actions, dim=0).to(device)
         prev_action_logSoftmaxes = torch.stack(self.action_logSoftmaxes, dim=0).to(device)
+        prev_critic_state_values = torch.stack(self.critic_state_values, dim=0).to(device)
 
         prev_states_shape = prev_states.size()[2:]
         prev_actions_shape = prev_actions.size()[-1]
@@ -138,11 +139,13 @@ class PPO:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
+        # Calculate advantages
+        advantages = rewards.detach() - prev_critic_state_values.detach()
+
+
         # Critic output of old actions and old critic state values
         action_logSoftmax, critic_state_values, entropy = self.policy_main.critic_output(prev_states.view(-1, *prev_states_shape),
                                                                                          prev_actions.view(-1, prev_actions_shape))
-        # Calculate advantages
-        advantages = rewards.detach() - critic_state_values.detach()
 
         # Match dimensions between critic state values tensor with rewards tensor
         critic_state_values = torch.squeeze(critic_state_values)

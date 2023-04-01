@@ -8,6 +8,8 @@ import time
 import cv2
 import numpy as np
 import torch
+from pygame.surfarray import array2d, make_surface
+
 torch.cuda.empty_cache()
 import torch.nn as nn
 import torch.optim as optim
@@ -105,8 +107,8 @@ class PPO(nn.Module):
 
         # Optimizers
         self.optimizer = optim.Adam([
-            {"params": self.policy_main.actor.parameters(), "lr": 1e-5},
-            {"params": self.policy_main.critic.parameters(), "lr": 1e-5},
+            {"params": self.policy_main.actor.parameters(), "lr": 1e-6},
+            {"params": self.policy_main.critic.parameters(), "lr": 1e-6},
         ])
 
         # MSE loss
@@ -179,6 +181,18 @@ def init_weights(m):
         torch.nn.init.uniform(m.weight, -0.01, 0.01)
         m.bias.data.fill_(0.01)
 
+
+def custom_image_processor(image):
+    state = np.array(array2d(make_surface(image)), dtype='uint8')
+
+    state = state[:, :400]
+    state = cv2.resize(state, (84, 84))
+    state = state/255.
+
+    if torch.cuda.is_available():
+        return torch.tensor([state]).float().cuda()
+    return torch.tensor([state]).float()
+
 def image_to_tensor(image):
     image_tensor = image.transpose(2, 0, 1)
     image_tensor = image_tensor.astype(np.float32)
@@ -212,7 +226,7 @@ def train(model: PPO, start):
     image_data, _, _, _ = game_state.frame_step(action)
 
     # Transform image to get initial state
-    image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+    image_data = custom_image_processor(image_data)
     state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
 
     for iteration in range(1, model.number_of_iterations):
@@ -228,7 +242,7 @@ def train(model: PPO, start):
         # Execute action and get next state and reward
         image_data, reward, terminal, score = game_state.frame_step(action_for_game)
 
-        image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+        image_data = custom_image_processor(image_data)
         next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
 
         # Save transition to replay memory

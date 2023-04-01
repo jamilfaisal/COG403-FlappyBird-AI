@@ -1,54 +1,34 @@
-"""
-This version uses one neural network for both the actor and the critic
-"""
 import csv
 import os
 import time
 
 import cv2
+import flappy_bird_gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from pygame.surfarray import array2d, make_surface
+from torch import nn, optim
 
 from game.flappy_bird import GameState
 
 
-class PPO(nn.Module):
+class A2CPolicy(nn.Module):
 
     def __init__(self):
-        super(PPO, self).__init__()
+        super(A2CPolicy, self).__init__()
 
-        self.number_of_actions = 2
-        self.number_of_iterations = 3000000
-        self.optimization_modulo = 20
-        self.save_modulo = 100000
-        self.save_folder = "pm_ppo_version1"
+        self.conv1 = nn.Conv2d(4, 16, 8, 4)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(16, 32, 4, 2)
+        self.relu2 = nn.ReLU()
+        self.fc3 = nn.Linear(2592, 256)
+        self.relu3 = nn.ReLU()
 
-        # Optimization hyperparameters
-        self.gamma = 0.99
-        self.gradient_clip = 0.1
-        self.value_loss_regularizer = 0.5
-        self.entropy_loss_regularizer = 0.01
-        self.max_gradient = 40
-
-        self.conv1 = nn.Conv2d(4, 32, 8, 4)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(32, 64, 4, 2)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.conv3 = nn.Conv2d(64, 64, 3, 1)
-        self.relu3 = nn.ReLU(inplace=True)
-        self.fc4 = nn.Linear(3136, 512)
-        self.relu4 = nn.ReLU(inplace=True)
-
-        self.actor = nn.Linear(512, self.number_of_actions)
-        self.critic = nn.Linear(512, 1)
+        self.actor = nn.Linear(256, 2)
+        self.critic = nn.Linear(256, 1)
 
         self.softmax = nn.Softmax()
         self.logSoftmax = nn.LogSoftmax()
-
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-5)
 
     def forward(self, x):
         out = self.conv1(x)
@@ -57,12 +37,10 @@ class PPO(nn.Module):
         out = self.conv2(out)
         out = self.relu2(out)
 
-        out = self.conv3(out)
-        out = self.relu3(out)
-
         out = out.view(out.size()[0], -1)
-        out = self.fc4(out)
-        out = self.relu4(out)
+
+        out = self.fc3(out)
+        out = self.relu3(out)
 
         action = self.actor(out)
         critic_state_value = self.critic(out)
@@ -94,7 +72,30 @@ class PPO(nn.Module):
         return critic_state_value, action_logSoftmax, dist_entropy
 
 
+class A2C:
 
+    def __init__(self):
+
+        self.number_of_actions = 2
+
+        self.max_gradient = 40
+        self.value_loss_regularizer = 0.5
+        self.entropy_loss_regularizer = 0.01
+        self.gamma = 0.99
+        self.optimization_modulo = 20
+
+        self.number_of_iterations = 3000000
+        self.save_modulo = 100000
+        self.save_folder = "pm_a2c_version2"
+
+
+        self.network = A2CPolicy()
+        self.network.apply(init_weights)
+
+        if torch.cuda.is_available():
+            self.network = self.network.cuda()
+
+        self.optimizer = optim.Adam(self.network.parameters(), lr=1e-4)
 
     def optimize_custom(self, replay_memory):
         state = []
@@ -114,56 +115,41 @@ class PPO(nn.Module):
         batch = {
             'state': torch.stack(state).detach(),
             'action': torch.stack(action).detach(),
-            'action_log_prob': torch.stack(action_log_prob).detach(),
-            'value': torch.stack(value).detach(),
             'reward': torch.tensor(reward).detach(),
             'mask': torch.stack(mask).detach(),
         }
         state_shape = batch['state'].size()[2:]
         action_shape = batch['action'].size()[-1]
 
+        next_critic_state_value, next_action = self.network(batch["state"][-1])
+
         # Compute returns
         returns = torch.zeros(self.optimization_modulo + 1, 1, 1)
+        returns[-1] = next_critic_state_value
         for i in reversed(range(self.optimization_modulo)):
             returns[i] = returns[i + 1] * self.gamma * batch['mask'][i] + batch['reward'][i]
         returns = returns[:-1]
-        returns = (returns - returns.mean()) / (returns.std() + 1e-5)
 
         # Process batch
-        values, action_log_probs, dist_entropy = self.critic_output(batch['state'].view(-1, *state_shape),
+        values, action_log_probs, dist_entropy = self.network.critic_output(batch['state'].view(-1, *state_shape),
                                                                         batch['action'].view(-1, action_shape))
         values = values.view(self.optimization_modulo, 1, 1)
         action_log_probs = action_log_probs.view(self.optimization_modulo, 1, 1)
 
         # Compute advantages
         advantages = returns.cuda() - values.detach().cuda()
+        value_loss = advantages.pow(2).mean() * self.value_loss_regularizer
+        action_loss = (-advantages * action_log_probs).mean()
+        entropy_loss = - dist_entropy * self.entropy_loss_regularizer
 
-        # Action loss
-        ratio = torch.exp(action_log_probs - batch['action_log_prob'].detach())
-        surr1 = ratio * advantages
-        surr2 = torch.clamp(ratio, 1 - self.gradient_clip, 1 + self.gradient_clip) * advantages
-        action_loss = -torch.min(surr1, surr2).mean()
+        loss = value_loss + action_loss + entropy_loss
 
-        # Value loss
-        value_loss = (returns.cuda() - values.cuda()).pow(2).mean()
-        value_loss = self.value_loss_regularizer * value_loss
-
-        # Total loss
-        loss = value_loss + action_loss - dist_entropy * self.entropy_loss_regularizer
-
-        # Optimizer step
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm(self.parameters(), self.max_gradient)
+        torch.nn.utils.clip_grad_norm(self.network.parameters(), self.max_gradient)
         self.optimizer.step()
 
-        return loss, value_loss * self.value_loss_regularizer, action_loss, - dist_entropy * self.entropy_loss_regularizer
-
-
-def init_weights(m):
-    if type(m) == nn.Conv2d or type(m) == nn.Linear:
-        torch.nn.init.uniform(m.weight, -0.01, 0.01)
-        m.bias.data.fill_(0.01)
+        return loss, value_loss, action_loss, entropy_loss
 
 
 def custom_image_processor(image):
@@ -177,27 +163,7 @@ def custom_image_processor(image):
     return torch.tensor([state]).float()
 
 
-def image_to_tensor(image):
-    image_tensor = image.transpose(2, 0, 1)
-    image_tensor = image_tensor.astype(np.float32)
-    image_tensor = torch.from_numpy(image_tensor)
-    if torch.cuda.is_available():  # put on GPU if CUDA is available
-        image_tensor = image_tensor.cuda()
-    return image_tensor
-
-
-def resize_and_bgr2gray(image):
-    image = image[0:288, 0:404]
-    image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
-    image_data[image_data > 0] = 255
-    image_data = np.reshape(image_data, (84, 84, 1))
-    return image_data
-
-def train(model: PPO, start):
-
-    # instantiate game
-    game_state = GameState()
-
+def train(model, start):
     # Initialize episode length
     episode_length = 0
 
@@ -207,29 +173,21 @@ def train(model: PPO, start):
     # Initialize replay memory
     replay_memory = []
 
-    # Initial action is to do nothing
-    action = torch.zeros([model.number_of_actions], dtype=torch.float32)
-    action[0] = 1
-    image_data, _, _, _ = game_state.frame_step(action)
-
-    # Transform image to get initial state
+    image_data = env.reset()
     image_data = custom_image_processor(image_data)
     state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
 
     for iteration in range(1, model.number_of_iterations):
-
         # Get next action given state
-        critic_state_value, action, action_logSoftmax = model.actor_output(state)
-        if action[0] == 0:
-            action_for_game = [1, 0]
-        else:
-            action_for_game = [0, 1]
+        critic_state_value, action, action_logSoftmax = model.network.actor_output(state)
 
-        # Execute action and get next state and reward
-        image_data, reward, terminal, score = game_state.frame_step(action_for_game)
-
+        image_data, reward, terminal, info = env.step(action)
         image_data = custom_image_processor(image_data)
         next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
+
+        # Remove during training
+        # env.render()
+        # time.sleep(1 / 144)  # FPS
 
         # Save transition to replay memory
         replay_memory.append((state, action, action_logSoftmax, critic_state_value, reward, torch.tensor([[float(terminal)]])))
@@ -250,13 +208,18 @@ def train(model: PPO, start):
             episode_length += 1
         else:
             it_ep_length_list.append([iteration, episode_length])
+            print(iteration, episode_length)
             episode_length = 0
+
+            image_data = env.reset()
+            image_data = custom_image_processor(image_data)
+            next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
 
         # Save model
         if iteration % model.save_modulo == 0:
             if not os.path.exists(model.save_folder):
                 os.mkdir(model.save_folder)
-            torch.save(model.state_dict(), os.path.join(model.save_folder, str(iteration) + ".pth"))
+            torch.save(model.network.state_dict(), os.path.join(model.save_folder, str(iteration) + ".pth"))
             with open(os.path.join(model.save_folder, "output.csv"), "w", newline='') as f:
                 csv_output = csv.writer(f)
                 csv_output.writerow(["iteration", "episode_length"])
@@ -268,22 +231,20 @@ def train(model: PPO, start):
         state = next_state
 
 
-def main(mode):
-    cuda_is_available = torch.cuda.is_available()
-
-    if mode == "train":
-        if not os.path.exists('../pretrained_model/'):
-            os.mkdir('../pretrained_model/')
-
-        model = PPO()
-        if cuda_is_available:
-            model = model.cuda()
-        model.apply(init_weights)
-
-        start = time.time()
-        train(model, start)
-
-
+def init_weights(m):
+    if type(m) == nn.Conv2d or type(m) == nn.Linear:
+        torch.nn.init.uniform(m.weight, -0.01, 0.01)
+        m.bias.data.fill_(0.01)
 
 if __name__ == "__main__":
-    main("train")
+    device = torch.device('cpu')
+    if torch.cuda.is_available():
+        device = torch.device('cuda:0')
+        torch.cuda.empty_cache()
+
+    a2c_model = A2C()
+    env = flappy_bird_gym.make("FlappyBird-rgb-v0")
+
+    start_time = time.time()
+    train(a2c_model, start_time)
+
