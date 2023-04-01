@@ -1,3 +1,7 @@
+"""
+This version uses one neural network for both the actor and the critic
+"""
+import csv
 import os
 import time
 
@@ -18,8 +22,8 @@ class PPO(nn.Module):
         self.number_of_actions = 2
         self.number_of_iterations = 3000000
         self.optimization_modulo = 20
-        self.save_modulo = 25000
-        self.save_folder = "pm_ppo"
+        self.save_modulo = 100000
+        self.save_folder = "pm_ppo_version1"
 
         # Optimization hyperparameters
         self.gamma = 0.99
@@ -184,6 +188,9 @@ def train(model: PPO, start):
     # Initialize episode length
     episode_length = 0
 
+    # Initialize iteration, episode_length list
+    it_ep_length_list = []
+
     # Initialize replay memory
     replay_memory = []
 
@@ -217,7 +224,11 @@ def train(model: PPO, start):
         # Optimization
         if iteration % model.optimization_modulo == 0:
             total_loss, value_loss, action_loss, entropy_loss = model.optimize_custom(replay_memory)
-            # model.optimize_custom(replay_memory)
+            print("Total loss: ", total_loss)
+            print("Value Loss: ", value_loss)
+            print("Action Loss: ", action_loss)
+            print("Entropy Loss: ", entropy_loss)
+            print("")
             # Reset memory
             replay_memory = []
 
@@ -225,21 +236,20 @@ def train(model: PPO, start):
         if terminal is False:
             episode_length += 1
         else:
-            # TODO Save this value somewhere to generate a graph
-            print(episode_length)
+            it_ep_length_list.append([iteration, episode_length])
             episode_length = 0
 
         # Save model
         if iteration % model.save_modulo == 0:
             if not os.path.exists(model.save_folder):
                 os.mkdir(model.save_folder)
-            torch.save(model, os.path.join(model.save_folder, str(iteration) + ".pth"))
+            torch.save(model.state_dict(), os.path.join(model.save_folder, str(iteration) + ".pth"))
+            with open(os.path.join(model.save_folder, "output.csv"), "w", newline='') as f:
+                csv_output = csv.writer(f)
+                csv_output.writerow(["iteration", "episode_length"])
+                csv_output.writerows(it_ep_length_list)
             print("Iteration: ", iteration)
             print("Elapsed Time: ", time.time() - start)
-            # print("Total loss: ", total_loss)
-            # print("Value Loss: ", value_loss)
-            # print("Action Loss: ", action_loss)
-            # print("Entropy Loss: ", entropy_loss)
 
         # Set current state as the next state
         state = next_state
@@ -249,8 +259,8 @@ def main(mode):
     cuda_is_available = torch.cuda.is_available()
 
     if mode == "train":
-        if not os.path.exists('pretrained_model/'):
-            os.mkdir('pretrained_model/')
+        if not os.path.exists('../pretrained_model/'):
+            os.mkdir('../pretrained_model/')
 
         model = PPO()
         if cuda_is_available:
