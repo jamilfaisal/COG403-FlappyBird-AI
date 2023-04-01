@@ -5,6 +5,7 @@ import time
 
 import cv2
 import numpy as np
+from scipy import ndimage
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -52,7 +53,7 @@ class NeuralNetwork(nn.Module):
 
 def init_weights(net):
     if type(net) == nn.Conv2d:
-        torch.nn.init.uniform(net.weight, -0.01, 0.01)
+        torch.nn.init.normal(net.weight, mean=0.0, std=np.sqrt(0.1))
         net.bias.data.fill_(0.01)
     if type(net) == nn.Linear:
         torch.nn.init.uniform(net.weight, -0.01, 0.01)
@@ -69,10 +70,29 @@ def image_to_tensor(image):
     return image_tensor
 
 
+# def resize_and_bgr2gray(image):
+#     image = image[0:288, 0:404]
+#     image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
+#     image_data[image_data > 0] = 255
+#     image_data = np.reshape(image_data, (84, 84, 1))
+#     return image_data
+
+def normalize(x):
+    """
+    Normalize a list of sample image data in the range of 0 to 1
+    : x: List of image data.  The image shape is (32, 32, 3)
+    : return: Numpy array of normalized data
+    """
+    return np.array((x - np.min(x)) / (np.max(x) - np.min(x)))
+
 def resize_and_bgr2gray(image):
+    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = image[0:288, 0:404]
+    #image_downsampled = ndimage.zoom(image,.3)
+    #image_data = cv2.resize(image_downsampled, (84, 84))
     image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
     image_data[image_data > 0] = 255
+    #image_data = normalize(image_data)
     image_data = np.reshape(image_data, (84, 84, 1))
     return image_data
 
@@ -85,7 +105,7 @@ def train(model, start):
     criterion = nn.MSELoss()
 
     # instantiate game
-    game_state = GameState(caption="dqn_struc")
+    game_state = GameState(caption="dqn_5c_255")
 
     # initialize replay memory
     replay_memory = []
@@ -96,20 +116,8 @@ def train(model, start):
     image_data, reward, terminal, score = game_state.frame_step(action)
     image_data = resize_and_bgr2gray(image_data)
     image_data = image_to_tensor(image_data)
-    history_length = []
-    if len(history_length) < 5:
-        history_length.append(image_data)
-    else:
-        history_length.pop(0)
-        history_length.append(image_data)
 
-    if len(history_length) < 5:
-        state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
-    else:
-        hist_tuple = (history_length[0], history_length[1], history_length[2], history_length[3], history_length[4])
-        state = torch.cat(hist_tuple).unsqueeze(0)
-
-    #state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
+    state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
 
     # initialize epsilon value
     epsilon = model.initial_epsilon
@@ -143,20 +151,10 @@ def train(model, start):
 
         # get next state and reward
         image_data_1, reward, terminal, score = game_state.frame_step(action)
+        if iteration == 300 or iteration == 2456 or iteration == 1044:
+            a = 0
         image_data_1 = resize_and_bgr2gray(image_data_1)
         image_data_1 = image_to_tensor(image_data_1)
-
-        if len(history_length) < 5:
-            history_length.append(image_data_1)
-        else:
-            history_length.pop(0)
-            history_length.append(image_data_1)
-
-        if len(history_length) < 5:
-            state_1 = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
-        else:
-            hist_tuple = (history_length[0], history_length[1], history_length[2], history_length[3], history_length[4])
-            state_1 = torch.cat(hist_tuple).unsqueeze(0)
 
         state_1 = torch.cat((state.squeeze(0)[1:, :, :,], image_data_1)).unsqueeze(0)
 
@@ -224,7 +222,7 @@ def train(model, start):
             max_score[1] = iteration
 
         if iteration % 50000 == 0:
-            torch.save(model, "replace/structure/dqn/current_model_" + str(iteration) + ".pth")
+            torch.save(model, "replace/image_processing/dqn/dqn_404/current_model_" + str(iteration) + ".pth")
             a = 1
         if iteration % 3000 == 0:
             print("iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",
@@ -254,20 +252,10 @@ def test(model):
     image_data, reward, terminal = game_state.frame_step(action)
     image_data = resize_and_bgr2gray(image_data)
     image_data = image_to_tensor(image_data)
-    history_length = []
-    if len(history_length) < 5:
-        history_length.append(image_data)
-    else:
-        history_length.pop(0)
-        history_length.append(image_data)
 
-    if len(history_length) < 5:
-        state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
-    else:
-        hist_tuple = (history_length[0], history_length[1], history_length[2], history_length[3], history_length[4])
-        state = torch.cat(hist_tuple).unsqueeze(0)
 
-    #state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
+
+    state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
 
     while True:
         # get output from the neural network
@@ -288,19 +276,7 @@ def test(model):
         image_data_1 = resize_and_bgr2gray(image_data_1)
         image_data_1 = image_to_tensor(image_data_1)
 
-        if len(history_length) < 5:
-            history_length.append(image_data_1)
-        else:
-            history_length.pop(0)
-            history_length.append(image_data_1)
-
-        if len(history_length) < 5:
-            state_1 = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
-        else:
-            hist_tuple = (history_length[0], history_length[1], history_length[2], history_length[3], history_length[4])
-            state_1 = torch.cat(hist_tuple).unsqueeze(0)
-
-        #state_1 = torch.cat((state.squeeze(0)[1:, :, :, :], image_data_1)).unsqueeze(0)
+        state_1 = torch.cat((state.squeeze(0)[1:, :, :,], image_data_1)).unsqueeze(0)
 
         # set state to be state_1
         state = state_1

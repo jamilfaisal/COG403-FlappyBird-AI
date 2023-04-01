@@ -549,3 +549,5 @@ iteration: 1611000 elapsed time: 53827.05606651306 epsilon: 0.014668057284028639
 iteration: 1614000 elapsed time: 53927.37794661522 epsilon: 0.014555707227853612 action: 0 reward: 0.1 Q max: 0.09492324 score: [5, 95645] location: pm7 mem_q_val: 3.037543773651123 y_batch: 3.819220542907715
 iteration: 1617000 elapsed time: 54027.6612098217 epsilon: 0.014443357171678585 action: 0 reward: 0.1 Q max: 0.094894245 score: [5, 95645] location: pm7 mem_q_val: 3.0366158485412598 y_batch: 5.012304410338402
 iteration: 1620000 elapsed time: 54128.3718457222 epsilon: 0.014331007115503558 action: 0 reward: 0.1 Q max: 0.095864944 score: [5, 95645] location: pm7 mem_q_val: 3.067678213119507 y_batch: 2.6522825360298157
+
+I coded hist_len wrong
