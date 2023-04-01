@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from pygame.surfarray import make_surface, array2d
 from torch.distributions import Categorical
 
 
@@ -119,7 +120,6 @@ class PPO:
         prev_states = torch.stack(self.states, dim=0).to(device)
         prev_actions = torch.stack(self.actions, dim=0).to(device)
         prev_action_logSoftmaxes = torch.stack(self.action_logSoftmaxes, dim=0).to(device)
-        prev_critic_state_values = torch.stack(self.critic_state_values, dim=0).to(device)
 
         prev_states_shape = prev_states.size()[2:]
         prev_actions_shape = prev_actions.size()[-1]
@@ -180,6 +180,19 @@ class PPO:
 
         return loss.mean(), value_loss, action_loss.mean(), entropy_loss.mean()
 
+
+def custom_image_processor(image):
+    state = np.array(array2d(make_surface(image)))
+
+    state = state[:, :400]
+    state = cv2.resize(state, (84, 84))
+    state = state/255.
+
+    if torch.cuda.is_available():
+        return torch.tensor([state]).float().cuda()
+    return torch.tensor([state]).float()
+
+
 def image_to_tensor(image):
     image_tensor = image.transpose(2, 0, 1)
     image_tensor = image_tensor.astype(np.float32)
@@ -205,7 +218,7 @@ def train(model, start):
     episode_length = 0
 
     image_data = env.reset()
-    image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+    image_data = custom_image_processor(image_data)
     state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
 
 
@@ -213,7 +226,7 @@ def train(model, start):
 
         action = model.pick_action(state)
         image_data, reward, terminal, info = env.step(action)
-        image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+        image_data = custom_image_processor(image_data)
         next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
 
         # Remove during training
@@ -251,7 +264,7 @@ def train(model, start):
             episode_length = 0
 
             image_data = env.reset()
-            image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+            image_data = custom_image_processor(image_data)
             next_state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
 
         state = next_state
