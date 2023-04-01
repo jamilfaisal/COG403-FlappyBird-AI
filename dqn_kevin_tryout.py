@@ -87,7 +87,7 @@ def normalize(x):
 
 def resize_and_bgr2gray(image):
     #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    image = image[0:288, 0:404]
+    image = image[0:288, 0:340]
     #image_downsampled = ndimage.zoom(image,.3)
     #image_data = cv2.resize(image_downsampled, (84, 84))
     image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
@@ -222,7 +222,7 @@ def train(model, start):
             max_score[1] = iteration
 
         if iteration % 50000 == 0:
-            torch.save(model, "replace/image_processing/dqn/dqn_404/current_model_" + str(iteration) + ".pth")
+            torch.save(model, "replace/image_processing/dqn/dqn_340/current_model_" + str(iteration) + ".pth")
             a = 1
         if iteration % 3000 == 0:
             print("iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",

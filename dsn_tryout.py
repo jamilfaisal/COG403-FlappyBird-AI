@@ -55,6 +55,7 @@ class NeuralNetwork(nn.Module):
 def init_weights(net):
     if type(net) == nn.Conv2d:
         torch.nn.init.normal(net.weight, mean=0.0, std=np.sqrt(0.1))
+        #torch.nn.init.uniform(net.weight, -0.01, 0.01)
         net.bias.data.fill_(0.01)
     if type(net) == nn.Linear:
         torch.nn.init.uniform(net.weight, -0.01, 0.01)
