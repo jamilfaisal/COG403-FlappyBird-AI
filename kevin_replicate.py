@@ -150,7 +150,7 @@ def train(model, start, init_ep):
         else:
             history_length.pop(0)
             history_length.append(image_data)
-        # not sure
+
         if len(history_length) < 5:
             state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
         else:

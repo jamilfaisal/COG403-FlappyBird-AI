@@ -93,7 +93,8 @@ PLAYER_INDEX_GEN = cycle([0, 1, 2, 1])
 
 
 class GameState:
-    def __init__(self):
+    def __init__(self, caption="caption"):
+        self.caption = caption
         self.score = self.playerIndex = self.loopIter = 0
         self.playerx = int(SCREENWIDTH * 0.2)
         self.playery = int((SCREENHEIGHT - PLAYER_HEIGHT) / 2)
@@ -119,6 +120,8 @@ class GameState:
         self.playerAccY = 1  # players downward accleration
         self.playerFlapAcc = -9  # players speed on flapping
         self.playerFlapped = False  # True when player flaps
+
+        pygame.display.set_caption('Flappy Bird'+self.caption)
 
     def frame_step(self, input_actions):
         pygame.event.pump()
@@ -181,7 +184,7 @@ class GameState:
                              self.upperPipes, self.lowerPipes)
         if isCrash:
             terminal = True
-            self.__init__()
+            self.__init__(caption=self.caption)
             reward = -1
 
         # draw sprites
