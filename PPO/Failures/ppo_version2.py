@@ -1,5 +1,5 @@
 """
-This version uses one neural network for both the actor and the critic
+This version uses two different neural networks and uses two policies.
 """
 import csv
 import os
@@ -8,50 +8,111 @@ import time
 import cv2
 import numpy as np
 import torch
+from pygame.surfarray import array2d, make_surface
+
+torch.cuda.empty_cache()
 import torch.nn as nn
 import torch.optim as optim
+from torch.distributions import Categorical
 
 from game.flappy_bird import GameState
+
 
 device = torch.device('cpu')
 if torch.cuda.is_available():
     device = torch.device('cuda:0')
     torch.cuda.empty_cache()
 
+class Policy(nn.Module):
+    def __init__(self):
+        super(Policy, self).__init__()
+
+        # Environment parameters
+        self.number_of_actions = 2
+
+        # Actor Neural network
+        self.actor = nn.Sequential(
+            nn.Conv2d(4, 32, 8, 4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Flatten(),
+            nn.Linear(3136, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, self.number_of_actions),
+            nn.Softmax(dim=-1)
+        )
+
+        # Critic Neural Network
+        self.critic = nn.Sequential(
+            nn.Conv2d(4, 32, 8, 4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Flatten(),
+            nn.Linear(3136, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, 1)
+        )
+
+    def actor_output(self, state):
+        # Forward pass
+        action_softmax = self.actor(state)
+        action_distribution = Categorical(action_softmax)
+
+        action = action_distribution.sample()
+        action_log_prob = action_distribution.log_prob(action)
+
+        return action, action_log_prob
+
+    def forward(self):
+        raise NotImplementedError
+
+    def critic_output(self, state, action):
+        # Forward pass
+        action_softmax = self.actor(state)
+        action_distribution = Categorical(action_softmax)
+        action_log_prob = action_distribution.log_prob(action)
+
+        entropy = action_distribution.entropy()
+        critic_state_value = self.critic(state)
+        return critic_state_value, action_log_prob, entropy
+
 class PPO(nn.Module):
 
     def __init__(self):
         super(PPO, self).__init__()
 
-        self.number_of_actions = 2
-        self.number_of_iterations = 3000000
-        self.optimization_modulo = 20
+        # Model saving parameters
         self.save_modulo = 100000
-        self.save_folder = "pm_ppo_version3"
+        self.save_folder = "pm_ppo_version2"
 
-        # Optimization hyperparameters
+        # Hyperparameters
+        self.number_of_iterations = 1600000
+        self.optimization_modulo = 40
         self.gamma = 0.99
         self.gradient_clip = 0.1
+        self.max_gradient = 40 # To prevent the gradient from exploding
         self.value_loss_regularizer = 0.5
         self.entropy_loss_regularizer = 0.01
-        self.max_gradient = 40
 
-        self.conv1 = nn.Conv2d(4, 32, 8, 4)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(32, 64, 4, 2)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.conv3 = nn.Conv2d(64, 64, 3, 1)
-        self.relu3 = nn.ReLU(inplace=True)
-        self.fc4 = nn.Linear(3136, 512)
-        self.relu4 = nn.ReLU(inplace=True)
+        # Initialize actor and critic policies
+        self.policy_main = Policy().to(device)
+        self.policy_previous = Policy().to(device)
+        self.policy_previous.load_state_dict(self.policy_main.state_dict())
 
-        self.actor = nn.Linear(512, self.number_of_actions)
-        self.critic = nn.Linear(512, 1)
+        # Optimizers
+        self.optimizer = optim.Adam([
+            {"params": self.policy_main.actor.parameters(), "lr": 1e-6},
+            {"params": self.policy_main.critic.parameters(), "lr": 1e-6},
+        ])
 
-        self.softmax = nn.Softmax()
-        self.logSoftmax = nn.LogSoftmax()
-
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-5)
+        # MSE loss
+        self.mse = nn.MSELoss()
 
         # Replay memory
         self.states = []
@@ -60,53 +121,8 @@ class PPO(nn.Module):
         self.rewards = []
         self.terminals = []
 
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.relu1(out)
-
-        out = self.conv2(out)
-        out = self.relu2(out)
-
-        out = self.conv3(out)
-        out = self.relu3(out)
-
-        out = out.view(out.size()[0], -1)
-        out = self.fc4(out)
-        out = self.relu4(out)
-
-        action = self.actor(out)
-        critic_state_value = self.critic(out)
-
-        return critic_state_value, action
-
-    def actor_output(self, state):
-        critic_state_value, action = self.forward(state)
-
-        action_softmax = self.softmax(action)
-        action_logSoftmax = self.logSoftmax(action)
-
-        # Pick action stochastically
-        action = action_softmax.multinomial(1)
-
-        action_logSoftmax = action_logSoftmax.gather(1, action)
-        return critic_state_value, action, action_logSoftmax
-
-    def critic_output(self, state, actions):
-        # Forward pass
-        critic_state_value, action = self.forward(state)
-
-        action_softmax = self.softmax(action)
-        action_logSoftmax = self.logSoftmax(action)
-
-        # Evaluate actions
-        action_logSoftmax = action_logSoftmax.gather(1, actions)
-        dist_entropy = -(action_logSoftmax * action_softmax).sum(-1).mean()
-        return critic_state_value, action_logSoftmax, dist_entropy
-
-
-
-
     def optimize_custom(self):
+        # state, action, action_logSoftmax, critic_state_value, reward, terminal = process_replay_memory(replay_memory)
 
         states = torch.stack(self.states, dim=0).to(device)
         actions = torch.stack(self.actions, dim=0).to(device)
@@ -115,7 +131,7 @@ class PPO(nn.Module):
         state_shape = states.size()[2:]
         action_shape = actions.size()[-1]
 
-        # Compute returns
+        # Calculate returns
         returns = []
         disc_reward = 0.
         for i in reversed(range(len(self.rewards))):
@@ -125,22 +141,23 @@ class PPO(nn.Module):
             returns.append(disc_reward)
         returns = torch.tensor(returns, dtype=torch.float32, device=device)
         returns = (returns - returns.mean()) / (returns.std() + 1e-5)
+        # returns = (returns - returns.mean()) / (returns.std((len(self.rewards) + 1, 1, 1)) + 1e-5)
 
         # Process batch
-        critic_state_value, action_logSoftmax, entropy = self.critic_output(states.view(-1, *state_shape),
-                                                                        actions.view(-1, action_shape))
+        critic_state_value, action_logSoftmax, entropy = self.policy_main.critic_output(states.view(-1, *state_shape),
+                                                                                        actions.view(-1, action_shape))
 
-        # Compute advantages
         advantages = returns - critic_state_value.detach()
 
-        # Action loss
+        # Calculate Action loss
         ratio = torch.exp(action_logSoftmax - action_logSoftmax_prev)
         clamped_ratio = torch.clamp(ratio, 1 - self.gradient_clip, 1 + self.gradient_clip)
         action_loss = -torch.min(ratio, clamped_ratio) * advantages
 
         # Value loss
-        value_loss = (returns - critic_state_value).pow(2).mean()
-        value_loss = self.value_loss_regularizer * value_loss
+        # value_loss = (returns - critic_state_value).pow(2).mean()
+        # value_loss = self.value_loss_regularizer * value_loss
+        value_loss = self.value_loss_regularizer * self.mse(critic_state_value, returns)
 
         # Entropy loss
         entropy_loss = -self.entropy_loss_regularizer * entropy
@@ -154,6 +171,8 @@ class PPO(nn.Module):
         torch.nn.utils.clip_grad_norm(self.parameters(), self.max_gradient)
         self.optimizer.step()
 
+        self.policy_previous.load_state_dict(self.policy_main.state_dict())
+
         return total_loss.mean(), value_loss, action_loss.mean(), entropy_loss.mean()
 
 
@@ -161,6 +180,18 @@ def init_weights(m):
     if type(m) == nn.Conv2d or type(m) == nn.Linear:
         torch.nn.init.uniform(m.weight, -0.01, 0.01)
         m.bias.data.fill_(0.01)
+
+
+def custom_image_processor(image):
+    state = np.array(array2d(make_surface(image)), dtype='uint8')
+
+    state = state[:, :400]
+    state = cv2.resize(state, (84, 84))
+    state = state/255.
+
+    if torch.cuda.is_available():
+        return torch.tensor([state]).float().cuda()
+    return torch.tensor([state]).float()
 
 def image_to_tensor(image):
     image_tensor = image.transpose(2, 0, 1)
@@ -190,19 +221,20 @@ def train(model: PPO, start):
     it_ep_length_list = []
 
     # Initial action is to do nothing
-    action = torch.zeros([model.number_of_actions], dtype=torch.float32)
+    action = torch.zeros([model.policy_main.number_of_actions], dtype=torch.float32)
     action[0] = 1
     image_data, _, _, _ = game_state.frame_step(action)
 
     # Transform image to get initial state
-    image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+    image_data = custom_image_processor(image_data)
     state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
 
     for iteration in range(1, model.number_of_iterations):
 
         # Get next action given state
-        critic_state_value, action, action_logSoftmax = model.actor_output(state)
-        if action[0] == 0:
+        with torch.no_grad():
+            action, action_logSoftmax = model.policy_previous.actor_output(state)
+        if action.detach().item() == 0:
             action_for_game = [1, 0]
         else:
             action_for_game = [0, 1]
@@ -210,7 +242,7 @@ def train(model: PPO, start):
         # Execute action and get next state and reward
         image_data, reward, terminal, score = game_state.frame_step(action_for_game)
 
-        image_data = image_to_tensor(resize_and_bgr2gray(image_data))
+        image_data = custom_image_processor(image_data)
         next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
 
         # Save transition to replay memory
@@ -219,6 +251,8 @@ def train(model: PPO, start):
         model.action_logSoftmax.append(action_logSoftmax.detach())
         model.rewards.append(reward)
         model.terminals.append(terminal)
+
+        # replay_memory.append((state, action, action_logSoftmax, reward, torch.tensor([[float(terminal)]])))
 
         # Optimization
         if iteration % model.optimization_modulo == 0:
@@ -254,6 +288,7 @@ def train(model: PPO, start):
             print("Iteration: ", iteration)
             print("Elapsed Time: ", time.time() - start)
 
+
         # Set current state as the next state
         state = next_state
 
@@ -262,8 +297,8 @@ def main(mode):
     cuda_is_available = torch.cuda.is_available()
 
     if mode == "train":
-        if not os.path.exists('../pretrained_model/'):
-            os.mkdir('../pretrained_model/')
+        if not os.path.exists('../../pretrained_model/'):
+            os.mkdir('../../pretrained_model/')
 
         model = PPO()
         if cuda_is_available:

@@ -1,30 +1,24 @@
-"""
-This version uses one neural network for both the actor and the critic
-"""
 import csv
 import os
 import time
 
-import cv2
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from pygame.surfarray import array2d, make_surface
+from torch import nn, optim
 
-from game.flappy_bird import GameState
 
+from game.wrapper import Game
 
 class PPO(nn.Module):
 
     def __init__(self):
+
         super(PPO, self).__init__()
 
         self.number_of_actions = 2
         self.number_of_iterations = 3000000
         self.optimization_modulo = 20
         self.save_modulo = 100000
-        self.save_folder = "pm_ppo_version1"
+        self.save_folder = "pm_ppo_final_version"
 
         # Optimization hyperparameters
         self.gamma = 0.99
@@ -49,6 +43,7 @@ class PPO(nn.Module):
         self.logSoftmax = nn.LogSoftmax()
 
         self.optimizer = optim.Adam(self.parameters(), lr=1e-5)
+        self.memory_replay = MemoryReplay()
 
     def forward(self, x):
         out = self.conv1(x)
@@ -82,74 +77,58 @@ class PPO(nn.Module):
         return critic_state_value, action, action_logSoftmax
 
     def critic_output(self, state, actions):
-        # Forward pass
         critic_state_value, action = self.forward(state)
 
         action_softmax = self.softmax(action)
         action_logSoftmax = self.logSoftmax(action)
 
-        # Evaluate actions
         action_logSoftmax = action_logSoftmax.gather(1, actions)
         dist_entropy = -(action_logSoftmax * action_softmax).sum(-1).mean()
         return critic_state_value, action_logSoftmax, dist_entropy
 
 
+    def optimize_custom(self):
 
+        prev_states = torch.stack(self.memory_replay.states).detach()
+        prev_actions = torch.stack(self.memory_replay.actions).detach()
+        prev_action_logSoftmaxes = torch.stack(self.memory_replay.action_logSoftmaxes).detach()
+        prev_crtitic_state_values = torch.stack(self.memory_replay.crtitic_state_values).detach()
+        prev_rewards = torch.tensor(self.memory_replay.rewards).detach()
+        prev_terminals = torch.stack(self.memory_replay.terminals).detach()
 
-    def optimize_custom(self, replay_memory):
-        state = []
-        action = []
-        action_log_prob = []
-        value = []
-        reward = []
-        mask = []
-        for memory in replay_memory:
-            state.append(memory[0])
-            action.append(memory[1])
-            action_log_prob.append(memory[2])
-            value.append(memory[3])
-            reward.append([[memory[4]]])
-            mask.append(memory[5])
+        states_shape = prev_states.size()[2:]
+        actions_shape = prev_actions.size()[-1]
 
-        batch = {
-            'state': torch.stack(state).detach(),
-            'action': torch.stack(action).detach(),
-            'action_log_prob': torch.stack(action_log_prob).detach(),
-            'value': torch.stack(value).detach(),
-            'reward': torch.tensor(reward).detach(),
-            'mask': torch.stack(mask).detach(),
-        }
-        state_shape = batch['state'].size()[2:]
-        action_shape = batch['action'].size()[-1]
-
-        # Compute returns
         returns = torch.zeros(self.optimization_modulo + 1, 1, 1)
         for i in reversed(range(self.optimization_modulo)):
-            returns[i] = returns[i + 1] * self.gamma * batch['mask'][i] + batch['reward'][i]
+            returns[i] = returns[i + 1] * self.gamma * prev_terminals[i] + prev_rewards[i]
         returns = returns[:-1]
         returns = (returns - returns.mean()) / (returns.std() + 1e-5)
 
-        # Process batch
-        values, action_log_probs, dist_entropy = self.critic_output(batch['state'].view(-1, *state_shape),
-                                                                        batch['action'].view(-1, action_shape))
-        values = values.view(self.optimization_modulo, 1, 1)
-        action_log_probs = action_log_probs.view(self.optimization_modulo, 1, 1)
+        critic_state_value, action_logSoftmax, entropy = self.critic_output(prev_states.view(-1, *states_shape),
+                                                                    prev_actions.view(-1, actions_shape))
+
+        critic_state_value = critic_state_value.view(self.optimization_modulo, 1, 1)
+        action_logSoftmax = action_logSoftmax.view(self.optimization_modulo, 1, 1)
 
         # Compute advantages
-        advantages = returns.cuda() - values.detach().cuda()
+        advantages = returns.cuda() - critic_state_value.detach().cuda()
 
         # Action loss
-        ratio = torch.exp(action_log_probs - batch['action_log_prob'].detach())
+        ratio = torch.exp(action_logSoftmax - prev_action_logSoftmaxes.detach())
         surr1 = ratio * advantages
         surr2 = torch.clamp(ratio, 1 - self.gradient_clip, 1 + self.gradient_clip) * advantages
         action_loss = -torch.min(surr1, surr2).mean()
 
         # Value loss
-        value_loss = (returns.cuda() - values.cuda()).pow(2).mean()
+        value_loss = (returns.cuda() - critic_state_value.cuda()).pow(2).mean()
         value_loss = self.value_loss_regularizer * value_loss
 
+        # Entropy loss
+        entropy_loss = - entropy * self.entropy_loss_regularizer
+
         # Total loss
-        loss = value_loss + action_loss - dist_entropy * self.entropy_loss_regularizer
+        loss = value_loss + action_loss + entropy_loss
 
         # Optimizer step
         self.optimizer.zero_grad()
@@ -157,46 +136,39 @@ class PPO(nn.Module):
         torch.nn.utils.clip_grad_norm(self.parameters(), self.max_gradient)
         self.optimizer.step()
 
-        return loss, value_loss * self.value_loss_regularizer, action_loss, - dist_entropy * self.entropy_loss_regularizer
+        return loss, value_loss, action_loss, entropy_loss
 
 
-def init_weights(m):
-    if type(m) == nn.Conv2d or type(m) == nn.Linear:
-        torch.nn.init.uniform(m.weight, -0.01, 0.01)
-        m.bias.data.fill_(0.01)
+class MemoryReplay:
+
+    def __init__(self):
+
+        self.states = []
+        self.actions = []
+        self.action_logSoftmaxes = []
+        self.crtitic_state_values = []
+        self.rewards = []
+        self.terminals = []
+
+    def reset(self):
+        self.states = []
+        self.actions = []
+        self.action_logSoftmaxes = []
+        self.crtitic_state_values = []
+        self.rewards = []
+        self.terminals = []
 
 
-def custom_image_processor(image):
-    state = np.array(array2d(make_surface(image)), dtype='uint8')
 
-    state = state[:, :400]
-    state = cv2.resize(state, (84, 84))
-    state = state/255.
-    if torch.cuda.is_available():
-        return torch.tensor([state]).float().cuda()
-    return torch.tensor([state]).float()
+def init_weights(model):
+    if type(model) == nn.Conv2d or type(model) == nn.Linear:
+        torch.nn.init.uniform(model.weight, -0.01, 0.01)
+        model.bias.data.fill_(0.01)
 
 
-def image_to_tensor(image):
-    image_tensor = image.transpose(2, 0, 1)
-    image_tensor = image_tensor.astype(np.float32)
-    image_tensor = torch.from_numpy(image_tensor)
-    if torch.cuda.is_available():  # put on GPU if CUDA is available
-        image_tensor = image_tensor.cuda()
-    return image_tensor
-
-
-def resize_and_bgr2gray(image):
-    image = image[0:288, 0:404]
-    image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
-    image_data[image_data > 0] = 255
-    image_data = np.reshape(image_data, (84, 84, 1))
-    return image_data
-
-def train(model: PPO, start):
-
+def train(model, start):
     # instantiate game
-    game_state = GameState()
+    game_state = Game(84)
 
     # Initialize episode length
     episode_length = 0
@@ -204,46 +176,37 @@ def train(model: PPO, start):
     # Initialize iteration, episode_length list
     it_ep_length_list = []
 
-    # Initialize replay memory
-    replay_memory = []
-
     # Initial action is to do nothing
-    action = torch.zeros([model.number_of_actions], dtype=torch.float32)
-    action[0] = 1
-    image_data, _, _, _ = game_state.frame_step(action)
-
-    # Transform image to get initial state
-    image_data = custom_image_processor(image_data)
-    state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
-
+    image_data, reward, terminal = game_state.step(False)
+    if torch.cuda.is_available():
+        image_data = image_data.cuda()
+    state = torch.stack([torch.cat([image_data, image_data, image_data, image_data])])
     for iteration in range(1, model.number_of_iterations):
-
-        # Get next action given state
         critic_state_value, action, action_logSoftmax = model.actor_output(state)
-        if action[0] == 0:
-            action_for_game = [1, 0]
-        else:
-            action_for_game = [0, 1]
 
         # Execute action and get next state and reward
-        image_data, reward, terminal, score = game_state.frame_step(action_for_game)
-
-        image_data = custom_image_processor(image_data)
-        next_state = torch.cat((state.squeeze(0)[1:, :, :], image_data)).unsqueeze(0)
+        image_data, reward, terminal = game_state.step(action)
+        if torch.cuda.is_available():
+            image_data = image_data.cuda()
+        next_state = torch.stack([torch.cat([state[0][1:], image_data])])
 
         # Save transition to replay memory
-        replay_memory.append((state, action, action_logSoftmax, critic_state_value, reward, torch.tensor([[float(terminal)]])))
+        model.memory_replay.states.append(state.data)
+        model.memory_replay.actions.append(action.data)
+        model.memory_replay.action_logSoftmaxes.append(action_logSoftmax.data)
+        model.memory_replay.crtitic_state_values.append(critic_state_value.data)
+        model.memory_replay.rewards.append([reward])
+        model.memory_replay.terminals.append(torch.tensor([[float(terminal)]]))
 
-        # Optimization
         if iteration % model.optimization_modulo == 0:
-            total_loss, value_loss, action_loss, entropy_loss = model.optimize_custom(replay_memory)
+            total_loss, value_loss, action_loss, entropy_loss = model.optimize_custom()
             print("Total loss: ", total_loss)
             print("Value Loss: ", value_loss)
             print("Action Loss: ", action_loss)
             print("Entropy Loss: ", entropy_loss)
             print("")
             # Reset memory
-            replay_memory = []
+            model.memory_replay.reset()
 
         # Update/Print & Reset episode length
         if terminal is False:
@@ -264,26 +227,14 @@ def train(model: PPO, start):
             print("Iteration: ", iteration)
             print("Elapsed Time: ", time.time() - start)
 
-        # Set current state as the next state
         state = next_state
 
 
-def main(mode):
-    cuda_is_available = torch.cuda.is_available()
-
-    if mode == "train":
-        if not os.path.exists('../pretrained_model/'):
-            os.mkdir('../pretrained_model/')
-
-        model = PPO()
-        if cuda_is_available:
-            model = model.cuda()
-        model.apply(init_weights)
-
-        start = time.time()
-        train(model, start)
-
-
-
 if __name__ == "__main__":
-    main("train")
+    ppo_model = PPO()
+    if torch.cuda.is_available():
+        ppo_model = ppo_model.cuda()
+    ppo_model.apply(init_weights)
+
+    time_start = time.time()
+    train(ppo_model, time_start)
