@@ -70,7 +70,7 @@ def getHitmask(image):
     return mask
 
 
-FPS = 30
+FPS = 1200
 SCREENWIDTH = 288
 SCREENHEIGHT = 512
 
@@ -80,7 +80,7 @@ SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 pygame.display.set_caption('Flappy Bird')
 
 IMAGES, HITMASKS = load()
-PIPEGAPSIZE = 200  # gap between upper and lower part of pipe
+PIPEGAPSIZE = 100  # gap between upper and lower part of pipe
 BASEY = SCREENHEIGHT * 0.79
 
 PLAYER_WIDTH = IMAGES['player'][0].get_width()

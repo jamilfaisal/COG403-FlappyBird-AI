@@ -1,3 +1,4 @@
+import csv
 import os
 import random
 import sys
@@ -25,6 +26,8 @@ class NeuralNetwork(nn.Module):
         self.number_of_iterations = 2000000
         self.replay_memory_size = 20000
         self.minibatch_size = 32
+        self.save_modulo = 100000
+        self.save_folder = "100gap"
 
         self.conv1 = nn.Conv2d(in_channels=5, out_channels=32, kernel_size=8, stride=4)
         self.relu1 = nn.ReLU(inplace=True)
@@ -53,7 +56,7 @@ class NeuralNetwork(nn.Module):
 
 def init_weights(net):
     if type(net) == nn.Conv2d:
-        torch.nn.init.normal(net.weight, mean=0.0, std=np.sqrt(0.1))
+        torch.nn.init.uniform(net.weight, -0.01, 0.01)
         net.bias.data.fill_(0.01)
     if type(net) == nn.Linear:
         torch.nn.init.uniform(net.weight, -0.01, 0.01)
@@ -99,7 +102,7 @@ def resize_and_bgr2gray(image):
 
 def train(model, start):
     # define Adam optimizer
-    optimizer = optim.RMSprop(model.parameters(), lr=1e-6, weight_decay=0.9, momentum=0.95)
+    optimizer = optim.Adam(model.parameters(), lr=1e-6)
 
     # initialize mean squared error loss
     criterion = nn.MSELoss()
@@ -109,11 +112,14 @@ def train(model, start):
 
     # initialize replay memory
     replay_memory = []
+    max_reward = 0
+    it_rw_lst = []
 
     # initial action is do nothing
     action = torch.zeros([model.number_of_actions], dtype=torch.float32)
     action[0] = 1
     image_data, reward, terminal, score = game_state.frame_step(action)
+    max_reward += reward
     image_data = resize_and_bgr2gray(image_data)
     image_data = image_to_tensor(image_data)
 
@@ -151,6 +157,7 @@ def train(model, start):
 
         # get next state and reward
         image_data_1, reward, terminal, score = game_state.frame_step(action)
+        max_reward += reward
         if iteration == 300 or iteration == 2456 or iteration == 1044:
             a = 0
         image_data_1 = resize_and_bgr2gray(image_data_1)
@@ -212,6 +219,10 @@ def train(model, start):
             loss.backward()
             optimizer.step()
 
+        if terminal is True:
+            it_rw_lst.append([iteration, max_reward])
+            max_reward = 0
+
         # set state to be state_1
         state = state_1
         iteration += 1
@@ -221,12 +232,16 @@ def train(model, start):
             max_score[0] = score
             max_score[1] = iteration
 
-        if iteration % 50000 == 0:
-            torch.save(model, "replace/image_processing/dqn/dqn_340/current_model_" + str(iteration) + ".pth")
+        if iteration % model.save_modulo == 0:
+            torch.save(model, "100gap/dqn/current_model_" + str(iteration) + ".pth")
+            with open(os.path.join(model.save_folder, "output_dqn.csv"), "w", newline='') as f:
+                csv_output = csv.writer(f)
+                csv_output.writerow(["iteration", "total_reward"])
+                csv_output.writerows(it_rw_lst)
             a = 1
         if iteration % 3000 == 0:
             print("iteration:", iteration, "elapsed time:", time.time() - start, "epsilon:", epsilon, "action:",
-                  action_index.cpu().detach().numpy(), "reward:", reward.numpy()[0][0], "Q max:",
+                  action_index.cpu().detach().numpy(), "max reward:", max_reward , "Q max:",
                   np.max(output.cpu().detach().numpy()), ""
                                                          "score:", max_score, "location:", "pm7",
                   "mem_q_val:", sum(q_value.cpu().detach().numpy()), "y_batch:", sum(y_batch.cpu().detach().numpy()))
@@ -252,6 +267,7 @@ def test(model):
     image_data, reward, terminal = game_state.frame_step(action)
     image_data = resize_and_bgr2gray(image_data)
     image_data = image_to_tensor(image_data)
+
 
 
 
