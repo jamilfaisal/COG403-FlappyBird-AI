@@ -1,3 +1,9 @@
 ﻿.idea
 game/__pycache__
 PPO/game/__pycache__
+PPO/Failures/pm_a2c_version1
+PPO/Failures/pm_a2c_version2
+PPO/Failures/pm_ppo_version1
+PPO/Failures/pm_ppo_version2
+PPO/Failures/pm_ppo_version3
+PPO/Failures/pm_ppo_version4
