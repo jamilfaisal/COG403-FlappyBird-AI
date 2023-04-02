@@ -24,7 +24,7 @@ os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
 class Game():
 
-    def __init__(self, frame_size, width=288, height=512):
+    def __init__(self, frame_size, width=288, height=512, caption="Flappy Bird"):
         """
         Initialize the game. 
         A minimal version for use training deep reinforcement learning methods. 
@@ -38,7 +38,7 @@ class Game():
 
         # Frame rate of the game
         # if drl_mode
-        self.fps = 1000
+        self.fps = 30
 
         # Game clock which ticks according to the game framerate
         self.clock = pygame.time.Clock()
@@ -46,7 +46,7 @@ class Game():
         # Set up display
         self.width, self.height = width, height
         self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption('Flappy Bird')
+        pygame.display.set_caption(caption)
 
         # Set up game objects
         from . sprites import Pipe, Bird, GameText, Base
@@ -91,6 +91,11 @@ class Game():
 
         # Update the entire game display
         pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
 
     def process_frame_drl(self):
