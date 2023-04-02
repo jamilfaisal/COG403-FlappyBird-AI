@@ -289,6 +289,7 @@ def test(model):
 
         # get next state
         image_data_1, reward, terminal, score = game_state.frame_step(action)
+        print(score)
         image_data_1 = resize_and_bgr2gray(image_data_1)
         image_data_1 = image_to_tensor(image_data_1)
 

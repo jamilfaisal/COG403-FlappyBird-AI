@@ -276,7 +276,7 @@ def test(model):
     # initial action is do nothing
     action = torch.zeros([model.number_of_actions], dtype=torch.float32)
     action[0] = 1
-    image_data, reward, terminal = game_state.frame_step(action)
+    image_data, reward, terminal, _ = game_state.frame_step(action)
 
     image_data = resize_and_bgr2gray(image_data)
     image_data = image_to_tensor(image_data)
@@ -299,10 +299,11 @@ def test(model):
         action[action_index] = 1
 
         # get next state
-        image_data_1, reward, terminal = game_state.frame_step(action)
+        image_data_1, reward, terminal, score = game_state.frame_step(action)
+        print(score)
         image_data_1 = resize_and_bgr2gray(image_data_1)
         image_data_1 = image_to_tensor(image_data_1)
-        state_1 = torch.cat((state.squeeze(0)[1:, :, :, :], image_data_1)).unsqueeze(0)
+        state_1 = torch.cat((state.squeeze(0)[1:, :, :], image_data_1)).unsqueeze(0)
 
         # set state to be state_1
         state = state_1
@@ -313,7 +314,7 @@ def main(mode):
 
     if mode == 'test':
         model = torch.load(
-            'pm0319/current_model_25000.pth',
+            'replace/image_processing/dsn/current_model_1800000.pth',
             map_location='cpu' if not cuda_is_available else None
         ).eval()
 
@@ -345,4 +346,4 @@ def main(mode):
 
 
 if __name__ == "__main__":
-    main('train')
+    main('test')

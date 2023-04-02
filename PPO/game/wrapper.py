@@ -38,7 +38,7 @@ class Game():
 
         # Frame rate of the game
         # if drl_mode
-        self.fps = 30
+        self.fps = 60
 
         # Game clock which ticks according to the game framerate
         self.clock = pygame.time.Clock()
