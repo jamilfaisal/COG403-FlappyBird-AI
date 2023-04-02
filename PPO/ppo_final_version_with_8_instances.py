@@ -139,6 +139,11 @@ class PPO(nn.Module):
 
         return loss, value_loss, action_loss, entropy_loss
 
+    def load(self, path):
+        self.load_state_dict(torch.load(
+            path,
+            map_location='cpu' if not torch.cuda.is_available() else None
+        ))
 
 class MemoryReplay:
 
@@ -254,11 +259,55 @@ def train(model, start):
         states = next_states
 
 
+def test(model):
+
+    game_state = Game(frame_size=84, caption="PPO")
+
+    cuda_is_available = torch.cuda.is_available()
+    # Initial action is to do nothing
+    image_data, reward, terminal = game_state.step(False)
+    states = torch.stack([torch.cat([image_data, image_data, image_data, image_data])])
+    if cuda_is_available:
+        states = states.cuda()
+
+    iteration = 0
+    episode_length = 0
+    while True:
+        # get output from the neural network
+        critic_state_values, actions, action_logSoftmaxes = model.actor_output(states)
+
+
+        # Execute action and get next state and reward
+        image_data, reward, terminal = game_state.step(actions)
+        if cuda_is_available:
+            image_data = image_data.cuda()
+        next_states = torch.stack([torch.cat([states[0][1:], image_data])])
+
+        # Update/Print & Reset episode length
+        if terminal is False:
+            episode_length += 1
+        else:
+            episode_length = 0
+
+        states = next_states
+        iteration += 1
+
+
 if __name__ == "__main__":
     ppo_model = PPO()
-    if torch.cuda.is_available():
-        ppo_model = ppo_model.cuda()
-    ppo_model.apply(init_weights)
+    mode = "test"
+    if mode == "train":
+        if torch.cuda.is_available():
+            ppo_model = ppo_model.cuda()
+        ppo_model.apply(init_weights)
 
-    time_start = time.time()
-    train(ppo_model, time_start)
+        time_start = time.time()
+        train(ppo_model, time_start)
+    else:
+        ppo_model = PPO()
+        ppo_model.load(os.path.join("pm_ppo_final_version_with_8_instances", "2000000.pth"))
+
+        if torch.cuda.is_available():  # put on GPU if CUDA is available
+            ppo_model = ppo_model.cuda()
+
+        test(ppo_model)
