@@ -273,6 +273,13 @@ def test(model):
 
     game_state = GameState(caption="sarsa")
 
+    # Initialize run #, score list
+    run_score_list = []
+
+    # Initialize run and previous score
+    run = 1
+    prev_score = 0
+
     # initial action is do nothing
     action = torch.zeros([model.number_of_actions], dtype=torch.float32)
     action[0] = 1
@@ -284,7 +291,7 @@ def test(model):
     state = torch.cat((image_data, image_data, image_data, image_data, image_data)).unsqueeze(0)
 
 
-    while True:
+    while run < 11:
         # get output from the neural network
         output = model(state)[0]
 
@@ -300,13 +307,24 @@ def test(model):
 
         # get next state
         image_data_1, reward, terminal, score = game_state.frame_step(action)
-        print(score)
         image_data_1 = resize_and_bgr2gray(image_data_1)
         image_data_1 = image_to_tensor(image_data_1)
         state_1 = torch.cat((state.squeeze(0)[1:, :, :], image_data_1)).unsqueeze(0)
 
+        if terminal:
+            print("Run {}, Score {}".format(run, prev_score))
+            run_score_list.append([run, prev_score])
+            run += 1
+
+        prev_score = score
+
         # set state to be state_1
         state = state_1
+
+    with open(os.path.join("dsn_models2", "output_dsn_test.csv"), "w", newline='') as f:
+        csv_output = csv.writer(f)
+        csv_output.writerow(["run", "score"])
+        csv_output.writerows(run_score_list)
 
 
 def main(mode):

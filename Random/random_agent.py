@@ -47,10 +47,11 @@ def test():
     # instantiate game
     game_state = GameState(caption="random_test")
 
-    # Initialize iteration, episode_length list
+    # Initialize run #, score list
     run_score_list = []
 
     run = 1
+    prev_score = 0
 
     while run < 11:
         random_action = random.randint(0, 1)
@@ -59,8 +60,10 @@ def test():
         image_data, reward, terminal, score = game_state.frame_step(action)
 
         if terminal:
-            run_score_list.append([run, score])
+            print("Run {}, Score {}".format(run, prev_score))
+            run_score_list.append([run, prev_score])
             run += 1
+        prev_score = score
 
     with open(os.path.join(SAVE_FOLDER, "output_random_test.csv"), "w", newline='') as f:
         csv_output = csv.writer(f)
@@ -78,4 +81,4 @@ def main(mode):
 
 
 if __name__ == "__main__":
-    main('train')
+    main('test')

@@ -261,36 +261,46 @@ def train(model, start):
 
 def test(model):
 
-    game_state = Game(frame_size=84, caption="PPO")
+    game_state = Game(frame_size=84, caption="PPO_test")
 
     cuda_is_available = torch.cuda.is_available()
+
+    # Initialize run #, score list
+    run_score_list = []
+
+    # Initialize run and previous score
+    run = 1
+    prev_score = 0
+
     # Initial action is to do nothing
-    image_data, reward, terminal = game_state.step(False)
+    image_data, reward, terminal, score = game_state.step(False)
     states = torch.stack([torch.cat([image_data, image_data, image_data, image_data])])
     if cuda_is_available:
         states = states.cuda()
 
-    iteration = 0
-    episode_length = 0
-    while True:
+    while run < 11:
         # get output from the neural network
         critic_state_values, actions, action_logSoftmaxes = model.actor_output(states)
 
 
         # Execute action and get next state and reward
-        image_data, reward, terminal = game_state.step(actions)
+        image_data, reward, terminal, score = game_state.step(actions)
         if cuda_is_available:
             image_data = image_data.cuda()
         next_states = torch.stack([torch.cat([states[0][1:], image_data])])
 
-        # Update/Print & Reset episode length
-        if terminal is False:
-            episode_length += 1
-        else:
-            episode_length = 0
+        if terminal:
+            print("Run {}, Score {}".format(run, prev_score))
+            run_score_list.append([run, prev_score])
+            run += 1
 
+        prev_score = score
         states = next_states
-        iteration += 1
+
+    with open(os.path.join("models", "output_ppo_test.csv"), "w", newline='') as f:
+        csv_output = csv.writer(f)
+        csv_output.writerow(["run", "score"])
+        csv_output.writerows(run_score_list)
 
 
 if __name__ == "__main__":

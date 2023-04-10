@@ -183,7 +183,7 @@ class Game():
         if done:
             self.__init__(self.frame_size)
 
-        return frame, reward, done
+        return frame, reward, done, self.game_text.score
 
 
 def listen():
