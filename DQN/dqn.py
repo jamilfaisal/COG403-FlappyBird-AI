@@ -14,10 +14,10 @@ import torch.optim as optim
 from game.flappy_bird import GameState
 
 
-class NeuralNetwork(nn.Module):
+class DeepQNetwork(nn.Module):
 
     def __init__(self):
-        super(NeuralNetwork, self).__init__()
+        super(DeepQNetwork, self).__init__()
 
         self.number_of_actions = 2
         self.gamma = 0.99
@@ -328,7 +328,7 @@ def main(mode):
         test(model)
 
     elif mode == 'train':
-        model = NeuralNetwork()
+        model = DeepQNetwork()
 
         # model = torch.load(
         #     'pretrained_model/current_model_500000.pth',
