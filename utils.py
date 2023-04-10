@@ -35,12 +35,13 @@ def convert_reward_to_score(df):
     return scores_list
 
 
-def plot_training_graph_and_pearson_corr(dqn_file, dsn_file, ppo_file, save_name,
+def plot_training_graph_and_pearson_corr(dqn_file, dsn_file, ppo_file, random_file, save_name,
                                          frames_to_score=False,
                                          rewards_to_score=False):
     dqn_df = pd.read_csv(dqn_file)
     dsn_df = pd.read_csv(dsn_file)
     ppo_df = pd.read_csv(ppo_file)
+    random_df = pd.read_csv(random_file)
     if frames_to_score:
         ppo_df["score"] = ppo_df.apply(lambda row: convert_frames_to_score(row), axis=1)
     if rewards_to_score:
@@ -63,6 +64,10 @@ def plot_training_graph_and_pearson_corr(dqn_file, dsn_file, ppo_file, save_name
     plt.scatter(dsn_df["iteration"], dsn_df["score"], label="DSN", c="blue")
     print("DSN Pearson Correlation: ", pearsonr(dsn_df["iteration"], dsn_df["score"]))
 
+    # Random graph
+    plt.scatter(random_df["iteration"], random_df["score"], label="Random Agent", c="grey", s=12)
+    print("Random Pearson Correlation ", pearsonr(random_df["iteration"], random_df["score"]))
+
     plt.xlabel("Training Iteration")
     plt.ylabel("Score")
     plt.legend(loc="upper left")
@@ -72,9 +77,10 @@ def plot_training_graph_and_pearson_corr(dqn_file, dsn_file, ppo_file, save_name
 
 
 if __name__ == "__main__":
-    dqn_path = os.path.join("Files for Project Report", "output_dqn.csv")
-    deep_sarsa_path = os.path.join("Files for Project Report", "output_dsn.csv")
-    ppo_path = os.path.join("Files for Project Report", "output_ppo.csv")
+    dqn_path = os.path.join("Files for Project Report", "output_dqn_train.csv")
+    deep_sarsa_path = os.path.join("Files for Project Report", "output_dsn_train.csv")
+    ppo_path = os.path.join("Files for Project Report", "output_ppo_train.csv")
+    random_path = os.path.join("Files for Project Report", "output_random_train.csv")
     save_path = os.path.join("Files for Project Report", "training_vs_score_graph.png")
 
-    plot_training_graph_and_pearson_corr(dqn_path, deep_sarsa_path, ppo_path, save_path, True, True)
+    plot_training_graph_and_pearson_corr(dqn_path, deep_sarsa_path, ppo_path, random_path, save_path, True, True)
