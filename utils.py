@@ -72,9 +72,9 @@ def plot_training_graph_and_pearson_corr(dqn_file, dsn_file, ppo_file, save_name
 
 
 if __name__ == "__main__":
-    dqn_path = os.path.join("CSV Files for Report", "output_dqn.csv")
-    deep_sarsa_path = os.path.join("CSV Files for Report", "output_dsn.csv")
-    ppo_path = os.path.join("CSV Files for Report", "output_ppo.csv")
-    save_file_name = "training_vs_score_graph.png"
+    dqn_path = os.path.join("Files for Project Report", "output_dqn.csv")
+    deep_sarsa_path = os.path.join("Files for Project Report", "output_dsn.csv")
+    ppo_path = os.path.join("Files for Project Report", "output_ppo.csv")
+    save_path = os.path.join("Files for Project Report", "training_vs_score_graph.png")
 
-    plot_training_graph_and_pearson_corr(dqn_path, deep_sarsa_path, ppo_path, save_file_name, True, True)
+    plot_training_graph_and_pearson_corr(dqn_path, deep_sarsa_path, ppo_path, save_path, True, True)

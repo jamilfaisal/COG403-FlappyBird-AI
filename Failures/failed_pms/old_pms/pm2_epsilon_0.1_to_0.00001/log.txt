@@ -1,0 +1,14 @@
+init epsilon = 0.1
+final = 0.000001
+iter = 1800k
+flat epsi = 6000k
+
+loss: tensor(4327.2134, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 50000 elapsed time: 1677.7170224189758 epsilon: 0.09166765276275461 action: 1 reward: 0.1 Q max: 396.26068 score: 0
+loss: tensor(1196.1031, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 100000 elapsed time: 3351.132080554962 epsilon: 0.08333513887523146 action: 0 reward: 0.1 Q max: 367.82806 score: 0
+loss: tensor(248.3826, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 150000 elapsed time: 5024.426780939102 epsilon: 0.07500262498770832 action: 0 reward: 0.1 Q max: 54.236122 score: 0
+loss: tensor(174.0779, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 200000 elapsed time: 6697.897818565369 epsilon: 0.06667011110018517 action: 0 reward: 0.1 Q max: 31.234936 score: 0
+loss: tensor(31.3765, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 250000 elapsed time: 8370.74408364296 epsilon: 0.058337597212662025 action: 0 reward: 0.1 Q max: 9.687475 score: 0
+loss: tensor(15.5964, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 300000 elapsed time: 10043.361078500748 epsilon: 0.05000508332513888 action: 0 reward: 0.1 Q max: 24.814219 score: 0
+loss: tensor(0.6329, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 350000 elapsed time: 11715.887064933777 epsilon: 0.04167256943761573 action: 0 reward: 0.1 Q max: 2.2581496 score: 0
+loss: tensor(0.0781, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 400000 elapsed time: 13388.001053094864 epsilon: 0.03334005555009259 action: 0 reward: 0.1 Q max: 4.216954 score: 0
+loss: tensor(0.1582, device='cuda:0', grad_fn=<MseLossBackward0>) iteration: 450000 elapsed time: 15059.815742254257 epsilon: 0.025007541662569438 action: 0 reward: 0.1 Q max: 1.0755458 score: 0

@@ -1,0 +1,11 @@
+iteration: 30 elapsed time: 2.7476460933685303 epsilon: 0.07499891394945697 action: 0 reward: 0.1 Q max: 0.009058184 score: [0, 0] location: pm7
+iteration: 300 elapsed time: 11.797664403915405 epsilon: 0.07498880244440122 action: 0 reward: 0.1 Q max: 0.009584978 score: [0, 0] location: pm7
+iteration: 3000 elapsed time: 102.87641286849976 epsilon: 0.07488768739384369 action: 1 reward: 0.1 Q max: 0.009604414 score: [1, 875] location: pm7 mem_q_val: 0.2972959512844682 y_batch: 2.387094110250473
+iteration: 3000 elapsed time: 102.90035319328308 epsilon: 0.07488768739384369 action: 1 reward: 0.1 Q max: 0.009604414 score: [1, 875] location: pm7 mem_q_val: 0.2972959512844682 y_batch: 2.387094110250473
+iteration: 6000 elapsed time: 203.55695295333862 epsilon: 0.07477533733766867 action: 1 reward: 0.1 Q max: 0.062228564 score: [3, 4502] location: pm7 mem_q_val: 1.8491975218057632 y_batch: 2.8481884598731995
+iteration: 9000 elapsed time: 309.0233223438263 epsilon: 0.07466298728149363 action: 0 reward: 0.1 Q max: 0.098982036 score: [3, 4502] location: pm7 mem_q_val: 2.99819153547287 y_batch: 6.335751056671143
+iteration: 10000 elapsed time: 342.7347135543823 epsilon: 0.07462553726276863 action: 0 reward: 0.1 Q max: 0.1081736 score: [3, 4502] location: pm7
+iteration: 12000 elapsed time: 410.4225540161133 epsilon: 0.07455063722531861 action: 0 reward: 0.1 Q max: 0.117816135 score: [3, 4502] location: pm7 mem_q_val: 3.694724190980196 y_batch: 5.715777039527893
+iteration: 15000 elapsed time: 535.8924860954285 epsilon: 0.07443828716914358 action: 0 reward: 0.1 Q max: 0.12636155 score: [3, 4502] location: pm7 mem_q_val: 3.6994034349918365 y_batch: 7.203133583068848
+iteration: 18000 elapsed time: 713.4728450775146 epsilon: 0.07432593711296856 action: 0 reward: 0.1 Q max: 0.13231303 score: [3, 4502] location: pm7 mem_q_val: 3.6627796217799187 y_batch: 7.391676902770996
+iteration: 21000 elapsed time: 889.344752073288 epsilon: 0.07421358705679353 action: 0 reward: 0.1 Q max: 0.13541675 score: [3, 4502] location: pm7 mem_q_val: 3.928136020898819 y_batch: 6.2559400498867035

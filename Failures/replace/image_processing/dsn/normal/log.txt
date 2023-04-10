@@ -1,0 +1,32 @@
+C:\Users\longl\AppData\Local\Programs\Python\Python39\python.exe D:\pycharm_projecs\COG403-FlappyBird-AI\dsn_tryout.py
+pygame 2.0.3 (SDL 2.0.16, Python 3.9.13)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+D:\pycharm_projecs\COG403-FlappyBird-AI\dsn_tryout.py:57: UserWarning: nn.init.normal is now deprecated in favor of nn.init.normal_.
+  torch.nn.init.normal(net.weight, mean=0.0, std=np.sqrt(0.1))
+D:\pycharm_projecs\COG403-FlappyBird-AI\dsn_tryout.py:60: UserWarning: nn.init.uniform is now deprecated in favor of nn.init.uniform_.
+  torch.nn.init.uniform(net.weight, -0.01, 0.01)
+iteration: 30 elapsed time: 2.3542563915252686 epsilon: 0.1 action: 1 reward: 0.1 Q max: 0.5093593 score: [0, 30] location: pm7
+iteration: 300 elapsed time: 11.404335975646973 epsilon: 0.1 action: 1 reward: 0.1 Q max: 0.7362125 score: [0, 300] location: pm7
+iteration: 3000 elapsed time: 102.25614023208618 epsilon: 0.09985019987509994 action: 1 reward: 0.1 Q max: 1.179598 score: [0, 3000] location: pm7 mem_q_val: 24.283177703619003 y_batch: 21.034896075725555
+iteration: 3000 elapsed time: 102.25913786888123 epsilon: 0.09985019987509994 action: 1 reward: 0.1 Q max: 1.179598 score: [0, 3000] location: pm7 mem_q_val: 24.283177703619003 y_batch: 21.034896075725555
+iteration: 6000 elapsed time: 203.52258682250977 epsilon: 0.0997003498001749 action: 0 reward: 0.1 Q max: 5.4143414 score: [1, 4168] location: pm7 mem_q_val: 83.48409616947174 y_batch: 80.4621696062386
+iteration: 9000 elapsed time: 304.19245624542236 epsilon: 0.09955049972524987 action: 0 reward: 0.1 Q max: -4.2219124 score: [3, 7903] location: pm7 mem_q_val: 52.030260905623436 y_batch: 52.16756623983383
+iteration: 10000 elapsed time: 337.72862482070923 epsilon: 0.09950054970027486 action: 0 reward: 0.1 Q max: 7.0912046 score: [3, 7903] location: pm7
+iteration: 12000 elapsed time: 404.8011600971222 epsilon: 0.09940064965032483 action: 0 reward: 0.1 Q max: 3.166721 score: [3, 7903] location: pm7 mem_q_val: 77.941310768947 y_batch: 78.90373057126999
+iteration: 15000 elapsed time: 505.4815471172333 epsilon: 0.0992507995753998 action: 0 reward: -1.0 Q max: 0.64163107 score: [3, 7903] location: pm7 mem_q_val: 37.40655238367617 y_batch: 39.204444862902164
+iteration: 18000 elapsed time: 606.2098937034607 epsilon: 0.09910094950047475 action: 0 reward: 0.1 Q max: 1.7768672 score: [3, 7903] location: pm7 mem_q_val: 42.749394834041595 y_batch: 44.097202599048615
+iteration: 21000 elapsed time: 706.8280448913574 epsilon: 0.09895109942554972 action: 0 reward: 0.1 Q max: 2.356172 score: [5, 20120] location: pm7 mem_q_val: 59.52484253048897 y_batch: 56.206062972545624
+iteration: 24000 elapsed time: 807.4813761711121 epsilon: 0.09880124935062468 action: 0 reward: 0.1 Q max: 1.7562062 score: [5, 20120] location: pm7 mem_q_val: 50.66718816757202 y_batch: 54.49749171733856
+iteration: 27000 elapsed time: 908.2717680931091 epsilon: 0.09865139927569964 action: 0 reward: 0.1 Q max: 1.2314175 score: [5, 20120] location: pm7 mem_q_val: 42.56477576494217 y_batch: 45.17982643842697
+iteration: 30000 elapsed time: 1008.8053629398346 epsilon: 0.09850154920077461 action: 0 reward: 0.1 Q max: 0.6843821 score: [5, 20120] location: pm7 mem_q_val: 25.19254243373871 y_batch: 26.320447325706482
+iteration: 33000 elapsed time: 1109.9590678215027 epsilon: 0.09835169912584957 action: 0 reward: 0.1 Q max: 0.087710306 score: [5, 20120] location: pm7 mem_q_val: 2.7381979543715715 y_batch: 5.842969447374344
+iteration: 36000 elapsed time: 1211.0544447898865 epsilon: 0.09820184905092454 action: 0 reward: 0.1 Q max: 0.11131632 score: [5, 20120] location: pm7 mem_q_val: 3.4685065895318985 y_batch: 7.441142231225967
+iteration: 39000 elapsed time: 1312.6467225551605 epsilon: 0.09805199897599949 action: 0 reward: 0.1 Q max: 0.12429895 score: [5, 20120] location: pm7 mem_q_val: 3.66615467146039 y_batch: 7.035024791955948
+iteration: 42000 elapsed time: 1413.3863382339478 epsilon: 0.09790214890107446 action: 0 reward: 0.1 Q max: 0.13001458 score: [5, 20120] location: pm7 mem_q_val: 4.051521137356758 y_batch: 7.211005888879299
+iteration: 45000 elapsed time: 1514.6546399593353 epsilon: 0.09775229882614941 action: 0 reward: 0.1 Q max: 0.13411811 score: [5, 20120] location: pm7 mem_q_val: 4.180013881996274 y_batch: 6.105437144637108
+iteration: 48000 elapsed time: 1615.3397693634033 epsilon: 0.09760244875122438 action: 0 reward: 0.1 Q max: 0.13438936 score: [5, 20120] location: pm7 mem_q_val: 4.075504746288061 y_batch: 6.224409222602844
+iteration: 51000 elapsed time: 1715.890795469284 epsilon: 0.09745259867629934 action: 0 reward: 0.1 Q max: 0.13192295 score: [5, 20120] location: pm7 mem_q_val: 4.1102350149303675 y_batch: 5.928342968225479
+iteration: 54000 elapsed time: 1817.0922436714172 epsilon: 0.0973027486013743 action: 0 reward: 0.1 Q max: 0.1308976 score: [5, 20120] location: pm7 mem_q_val: 4.188723087310791 y_batch: 7.237853616476059
+iteration: 57000 elapsed time: 1917.5368540287018 epsilon: 0.09715289852644927 action: 0 reward: 0.1 Q max: 0.13145825 score: [5, 20120] location: pm7 mem_q_val: 4.206664085388184 y_batch: 6.025637924671173
+iteration: 60000 elapsed time: 2017.9662809371948 epsilon: 0.09700304845152423 action: 0 reward: 0.1 Q max: 0.13184573 score: [5, 20120] location: pm7 mem_q_val: 3.9988047406077385 y_batch: 7.158817037940025
+iteration: 63000 elapsed time: 2118.4221665859222 epsilon: 0.0968531983765992 action: 0 reward: 0.1 Q max: 0.13344735 score: [5, 20120] location: pm7 mem_q_val: 4.047008201479912 y_batch: 8.217075325548649
