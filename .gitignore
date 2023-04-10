@@ -7,3 +7,5 @@ PPO/Failures/pm_ppo_version1
 PPO/Failures/pm_ppo_version2
 PPO/Failures/pm_ppo_version3
 PPO/Failures/pm_ppo_version4
+DSN/game/__pycache__
+DQN/game/__pycache__
